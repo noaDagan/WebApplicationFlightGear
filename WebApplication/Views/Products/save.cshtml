@@ -1,0 +1,124 @@
+﻿
+@{
+    ViewBag.Title = "save";
+}
+<style>
+    html, body {
+        width: 100%;
+        height: 100%
+    }
+
+    canvas {
+        height: 100%;
+        width: 100%;
+        overflow: hidden
+    }
+</style>
+<div>
+    <img id="map" src="~/export-map-share.png" alt="map2" hidden="hidden" />
+    <canvas id="myCanvas"
+            style="border:1px solid black;"></canvas>
+</div>
+
+<script>
+    //Initialize the strating window
+    window.onload = function () {
+        var canvas = document.getElementById("myCanvas");
+        var img = document.getElementById("map");
+        canvas.style.position = "absolute";
+        canvas.style.left = img.offsetLeft;
+        canvas.style.top = img.offsetTop;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        var ctx = canvas.getContext("2d");
+        ctx.translate(0, 0);
+        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+    };
+</script>
+
+<script>
+    var IntervalTime =  @Session["time"]*1000;
+    var TimeOut = @Session["timeOut"] * 10000;
+    var prevLon = null;
+    var prevLat = null;
+    var interval = null;
+    var toSave = false;
+ //  var count = 0;
+    //The function draw a dot and a path according to lan and lat
+    myTimer = function () {
+        if (!toSave) {
+           // count = count + 1;
+            var url = "@Url.Action("GetValue")";            
+        } else {
+            var url = "@Url.Action("saveValue")";
+            
+        }
+        $.post(url).done(function (xml) {
+            var xmlDoc = $.parseXML( xml ),
+            $xml = $( xmlDoc ),
+            lonValue = $xml.find("Lon").text();
+            latValue = $xml.find("Lat").text();
+            var lon = parseFloat(lonValue)
+            var lat = parseFloat(latValue)
+            //Adjust the point to the map
+            lon = (lon + 180) * (window.innerWidth / 360); 
+            lat = (lat + 90) * (window.innerHeight / 180);
+            //If this the first time draw circle
+            if (prevLat == null || prevLon == null) {
+                drawPoint(lon, lat);
+            } else {
+                drawLine(prevLon, prevLat, lon, lat);
+            }
+            prevLon = lon;
+            prevLat = lat;
+        });
+    }
+    if (IntervalTime != 0) {
+        toSave = true;
+        interval = setInterval(myTimer, IntervalTime);
+        //Stop the interval after TimeOut seconds
+        setTimeout(() => {
+            clearInterval(interval); toSave = false;  interval = setInterval(myTimer, IntervalTime);
+        }, TimeOut);
+     } else {
+         myTimer(false);
+    }
+
+</script>
+<script>
+    //The function draw a point on the canvas
+    drawPoint = (function (x, y) {
+        var canvas = document.getElementById("myCanvas");
+        var img = document.getElementById("map");
+        canvas.style.position = "absolute";
+        canvas.style.left = img.offsetLeft;
+        canvas.style.top = img.offsetTop;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "red";
+        //Draw thr circle according to x and y
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+    });
+</script>
+<script>
+    //The function draw a line on the canva
+    drawLine = (function (prevX, prevY, x, y) {
+        var canvas = document.getElementById("myCanvas");
+        var img = document.getElementById("map");
+        canvas.style.position = "absolute";
+        canvas.style.left = img.offsetLeft;
+        canvas.style.top = img.offsetTop;
+        var ctx = canvas.getContext("2d");
+        ctx.strokeStyle = "red";
+        //Draw thr circle according the parameters
+        ctx.beginPath();
+        //alert(prevX +" "+ prevY)
+        //alert(x + " " + y)
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.closePath();
+    });
+</script>
